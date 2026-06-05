@@ -1197,4 +1197,12 @@ canvas {
     border: 1px solid var(--border-color);
     border-radius: 8px;
     display: block;
+    margin-bottom: 8px;
+}
+
+.plot-section-title {
+    margin: 20px 0 8px;
+    font-size: 14px;
+    color: var(--accent-blue);
+    font-weight: 600;
 }

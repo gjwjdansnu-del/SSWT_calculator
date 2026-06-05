@@ -10,7 +10,7 @@
 <body>
     <div class="app-container">
         <header class="app-header">
-            <h1>🌬️ SSWT 실험 로거 <span class="version-tag">ver 1.1.0</span></h1>
+            <h1>🌬️ SSWT 실험 로거 <span class="version-tag">ver 1.2.0</span></h1>
             <div class="header-actions">
                 <button onclick="createNewExperimentFromUI()" class="btn-secondary">➕ 새 실험</button>
                 <button onclick="showExperimentList()" class="btn-secondary">📋 실험 목록</button>
@@ -154,7 +154,7 @@
                 <div class="page-header">
                     <div>
                         <h2>🔬 데이터 후처리 — 캘리브레이션</h2>
-                        <p class="page-subtitle">CSV 업로드 → mA/V 역변환 → ax+b 재캘리브레이션</p>
+                        <p class="page-subtitle">CSV 업로드 → 캘리브레이션 → 0점 보정 → static P · 비율 · Mach 계산</p>
                     </div>
                 </div>
 
@@ -167,23 +167,34 @@
                 </div>
 
                 <div class="form-section" id="processing-results" style="display:none;">
-                    <h3>2. 캘리브레이션 결과</h3>
+                    <h3>2. 처리 결과</h3>
                     <div class="calib-info-box">
-                        <strong>변환 규칙</strong>
+                        <strong>처리 파이프라인</strong>
                         <ul class="calib-rule-list">
-                            <li>Ch1~2, Ch10: 4–20 mA → 0–20 barg (Ch10은 재캘리브 없이 유지)</li>
-                            <li>Ch3: 4–20 mA → 0–10 barg</li>
-                            <li>Ch4~9: 4–20 mA → 0–2 barg (노즐벽면 4~9, ax+b 적용)</li>
-                            <li>Ch11: 4–20 mA → 0–24.5 barg (재캘리브 없이 유지)</li>
-                            <li>Ch12~16: 0–10 V → 0–10 barg (피토 1~5, ax+b 적용)</li>
+                            <li>캘리브레이션 → Ch11 제외 첫 10프레임 평균 0점 보정 → + air pressure [hpa]/1000 → static P [bar]</li>
+                            <li>비율: Ch1~9, Ch12~16 각각 / Ch10 (P₀)</li>
+                            <li>Mach(벽면): 등엔트로피 P/P₀ 역산 · Mach(피토): 등엔트로피+정상충격파 역산</li>
                         </ul>
+                        <p id="proc-info-text" style="margin-top:8px;color:#7eb8f7;"></p>
                     </div>
 
-                    <canvas id="calibrated-graph" width="1200" height="500" class="calib-canvas"></canvas>
+                    <h4 class="plot-section-title">Static Pressure [bar]</h4>
+                    <canvas id="graph-static" width="1200" height="380" class="calib-canvas"></canvas>
+
+                    <h4 class="plot-section-title">Pressure Ratio — 노즐벽면 / Ch10</h4>
+                    <canvas id="graph-ratio-wall" width="1200" height="320" class="calib-canvas"></canvas>
+
+                    <h4 class="plot-section-title">Pressure Ratio — 피토 / Ch10</h4>
+                    <canvas id="graph-ratio-pitot" width="1200" height="320" class="calib-canvas"></canvas>
+
+                    <h4 class="plot-section-title">Mach Number — 노즐벽면 (등엔트로피)</h4>
+                    <canvas id="graph-mach-wall" width="1200" height="320" class="calib-canvas"></canvas>
+
+                    <h4 class="plot-section-title">Mach Number — 피토 (정상충격파 역산)</h4>
+                    <canvas id="graph-mach-pitot" width="1200" height="320" class="calib-canvas"></canvas>
 
                     <div class="header-btn-group" style="margin-top:16px;">
-                        <button onclick="exportCalibratedExcel()" class="btn-primary">📥 엑셀 내보내기</button>
-                        <button onclick="exportCalibratedCsv()" class="btn-secondary">📥 CSV 내보내기</button>
+                        <button onclick="exportCalibratedExcel()" class="btn-primary">📥 엑셀 내보내기 (5시트)</button>
                     </div>
                 </div>
             </div>
