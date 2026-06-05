@@ -82,10 +82,12 @@ function renderSafetyChecklist() {
         }
 
         const row = document.createElement('tr');
+        row.className = 'checklist-item-row' + (item.checked ? ' checked' : '');
+        row.dataset.index = idx;
+        row.addEventListener('click', () => handleChecklistRowClick(idx));
         row.innerHTML = `
             <td class="check-cell">
-                <input type="checkbox" id="chk-${idx}" ${item.checked ? 'checked' : ''}
-                       onchange="toggleChecklistItem(${idx}, this.checked)">
+                <span class="check-icon" aria-hidden="true">${item.checked ? '✓' : ''}</span>
             </td>
             <td class="item-cell">${item.label}</td>
             <td class="stage-badge-cell">
@@ -96,9 +98,21 @@ function renderSafetyChecklist() {
     });
 }
 
-function toggleChecklistItem(index, checked) {
+function handleChecklistRowClick(index) {
     if (!currentExperiment) return;
-    currentExperiment.safetyChecklist.items[index].checked = checked;
+    const items = currentExperiment.safetyChecklist.items;
+    let firstUnchecked = items.findIndex(i => !i.checked);
+    if (firstUnchecked === -1) firstUnchecked = items.length;
+
+    if (index < firstUnchecked) {
+        // 이미 체크된 구간 클릭 → 해당 항목부터 아래 모두 해제
+        for (let i = index; i < items.length; i++) items[i].checked = false;
+    } else {
+        // 미체크 구간 클릭 → 위부터 해당 항목까지 일괄 체크
+        for (let i = 0; i <= index; i++) items[i].checked = true;
+    }
+
+    renderSafetyChecklist();
     updateChecklistProgress();
 }
 
