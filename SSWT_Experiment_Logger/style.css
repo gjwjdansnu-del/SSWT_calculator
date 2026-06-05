@@ -925,6 +925,88 @@ canvas {
     border-left: 4px solid var(--accent-yellow);
 }
 
+/* 체크리스트 내 인라인 입력 블록 */
+.inline-input-block {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 12px 0;
+}
+
+.pre-check-block {
+    border-left: 4px solid var(--accent-blue);
+    margin-bottom: 20px;
+}
+
+.mid-check-block {
+    border-left: 4px solid var(--accent-yellow);
+    margin: 4px 0;
+}
+
+.inline-input-block-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.inline-step-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(88, 166, 255, 0.2);
+    color: var(--accent-blue);
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+}
+
+.inline-step-badge.mid {
+    background: rgba(210, 153, 34, 0.2);
+    color: var(--accent-yellow);
+}
+
+.inline-input-row td {
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+}
+
+.inline-fields-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.inline-field {
+    flex: 1;
+    min-width: 200px;
+    margin: 0;
+}
+
+.inline-field input {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: var(--text-primary);
+    font-size: 14px;
+    width: 100%;
+}
+
+.inline-field input:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+}
+
+.pre-check-block .form-grid {
+    gap: 14px;
+}
+
 .checklist-progress-wrap {
     display: flex;
     align-items: center;

@@ -10,7 +10,7 @@
 <body>
     <div class="app-container">
         <header class="app-header">
-            <h1>🌬️ SSWT 실험 로거 <span class="version-tag">ver 1.0.1</span></h1>
+            <h1>🌬️ SSWT 실험 로거 <span class="version-tag">ver 1.0.2</span></h1>
             <div class="header-actions">
                 <button onclick="createNewExperimentFromUI()" class="btn-secondary">➕ 새 실험</button>
                 <button onclick="showExperimentList()" class="btn-secondary">📋 실험 목록</button>
@@ -21,51 +21,22 @@
         </header>
 
         <nav class="nav-tabs">
-            <button class="tab-btn active" data-tab="safety" onclick="switchTab('safety')">🛡️ 안전 체크리스트</button>
-            <button class="tab-btn" data-tab="before" onclick="switchTab('before')">📝 실험 전 (Before)</button>
+            <button class="tab-btn active" data-tab="experiment" onclick="switchTab('experiment')">🛡️ 실험 전 &amp; 체크리스트</button>
             <button class="tab-btn tab-disabled" disabled title="추후 구현 예정">🔬 데이터 후처리</button>
             <button class="tab-btn tab-disabled" disabled title="추후 구현 예정">🧮 유동조건 계산</button>
         </nav>
 
         <main class="main-content">
-
-            <!-- 안전 체크리스트 -->
-            <div id="tab-safety" class="tab-content active">
+            <div id="tab-experiment" class="tab-content active">
                 <div class="page-header">
                     <div>
-                        <h2>🛡️ 초음속 풍동 가동 안전 체크리스트</h2>
-                        <p class="page-subtitle">Rev.0 / 운전 전 확인용</p>
+                        <h2>🛡️ 초음속 풍동 — 실험 전 입력 &amp; 가동 체크리스트</h2>
+                        <p class="page-subtitle">Rev.0 / 운전 전 확인용 — 입력 후 순서대로 체크</p>
                     </div>
                     <div class="header-btn-group">
                         <button onclick="printSafetyChecklist()" class="btn-secondary">🖨️ 인쇄</button>
-                        <button onclick="resetSafetyChecklist()" class="btn-secondary">🔄 초기화</button>
-                        <button onclick="saveSafetyChecklist()" class="btn-primary">💾 저장</button>
-                    </div>
-                </div>
-
-                <div class="form-section checklist-header-section">
-                    <h3>실험 정보</h3>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>실험번호 #</label>
-                            <input type="text" id="exp-number" readonly>
-                        </div>
-                        <div class="form-group">
-                            <label>실험일</label>
-                            <input type="date" id="exp-date">
-                        </div>
-                        <div class="form-group">
-                            <label>시험자</label>
-                            <input type="text" id="exp-name" placeholder="시험자 이름">
-                        </div>
-                        <div class="form-group">
-                            <label>고압 탱크 압력 [bar]</label>
-                            <input type="number" id="chk-tank-pressure" step="0.1" placeholder="예: 8.0">
-                        </div>
-                        <div class="form-group">
-                            <label>조절 밸브 값</label>
-                            <input type="text" id="chk-control-valve" placeholder="예: 3.5">
-                        </div>
+                        <button onclick="resetSafetyChecklist()" class="btn-secondary">🔄 체크 초기화</button>
+                        <button onclick="saveExperimentData()" class="btn-primary">💾 저장</button>
                     </div>
                 </div>
 
@@ -77,6 +48,89 @@
                         <span class="checklist-progress-text" id="checklist-progress-text">0 / 25 항목 완료 (0%)</span>
                     </div>
 
+                    <!-- ① 체크리스트 시작 전 입력 -->
+                    <div class="inline-input-block pre-check-block">
+                        <div class="inline-input-block-header">
+                            <span class="inline-step-badge">입력</span>
+                            <strong>체크리스트 시작 전 — 실험 정보 입력</strong>
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>exp#</label>
+                                <input type="text" id="exp-number" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label>name (시험자)</label>
+                                <input type="text" id="exp-name" placeholder="예: 홍길동">
+                            </div>
+                            <div class="form-group">
+                                <label>date</label>
+                                <input type="date" id="exp-date">
+                            </div>
+                            <div class="form-group">
+                                <label>test model</label>
+                                <input type="text" id="test-model" placeholder="예: NACA0012">
+                            </div>
+                            <div class="form-group">
+                                <label>Objective</label>
+                                <input type="text" id="objective" placeholder="예: Mach 2.0 flow visualization">
+                            </div>
+                            <div class="form-group">
+                                <label>Mach #</label>
+                                <input type="number" id="target-mach" step="0.01" placeholder="예: 2.0">
+                            </div>
+                            <div class="form-group">
+                                <label>air pressure [hpa]</label>
+                                <input type="number" id="air-pressure" step="0.1" placeholder="예: 1013.2">
+                            </div>
+                            <div class="form-group">
+                                <label>air temperature [°C]</label>
+                                <input type="number" id="air-temp" step="0.1" placeholder="예: 25.0">
+                            </div>
+                            <div class="form-group">
+                                <label>air humidity [%]</label>
+                                <input type="number" id="air-humidity" step="0.1" placeholder="예: 50.0">
+                            </div>
+                            <div class="form-group">
+                                <label>Schlieren method</label>
+                                <input type="text" id="schlieren-method" placeholder="예: Z-type Schlieren">
+                            </div>
+                            <div class="form-group">
+                                <label>Schlieren target</label>
+                                <input type="text" id="schlieren-target" placeholder="예: model surface">
+                            </div>
+                            <div class="form-group">
+                                <label>camera</label>
+                                <input type="text" id="camera-model" placeholder="예: Phantom TMX7510">
+                            </div>
+                            <div class="form-group">
+                                <label>FPS [Hz]</label>
+                                <input type="number" id="camera-fps" step="1000" placeholder="예: 500000">
+                            </div>
+                            <div class="form-group">
+                                <label>W [px]</label>
+                                <input type="number" id="camera-width" placeholder="예: 1280">
+                            </div>
+                            <div class="form-group">
+                                <label>H [px]</label>
+                                <input type="number" id="camera-height" placeholder="예: 800">
+                            </div>
+                            <div class="form-group">
+                                <label>lens focal length [mm]</label>
+                                <input type="text" id="lens-focal" placeholder="예: 200">
+                            </div>
+                            <div class="form-group">
+                                <label>Expose time [μs]</label>
+                                <input type="number" id="expose-time" step="0.01" placeholder="예: 1.0">
+                            </div>
+                            <div class="form-group">
+                                <label>Expose index</label>
+                                <input type="number" id="expose-index" step="1" placeholder="예: 1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 체크리스트 (중간 입력은 JS에서 삽입) -->
                     <table class="checklist-table" id="checklist-table">
                         <thead>
                             <tr>
@@ -94,129 +148,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- 실험 전 정보 -->
-            <div id="tab-before" class="tab-content">
-                <div class="page-header">
-                    <h2>📝 실험 전 정보 입력</h2>
-                    <button onclick="saveBeforeData()" class="btn-primary">💾 저장</button>
-                </div>
-
-                <div class="form-section">
-                    <h3>실험 정보</h3>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>exp#</label>
-                            <input type="text" id="exp-number-before" readonly
-                                   onfocus="document.getElementById('exp-number').value=this.value">
-                        </div>
-                        <div class="form-group">
-                            <label>name (시험자)</label>
-                            <input type="text" id="exp-name-sync" placeholder="예: 홍길동"
-                                   oninput="document.getElementById('exp-name').value=this.value">
-                        </div>
-                        <div class="form-group">
-                            <label>date</label>
-                            <input type="date" id="exp-date-sync"
-                                   oninput="document.getElementById('exp-date').value=this.value">
-                        </div>
-                        <div class="form-group">
-                            <label>test model</label>
-                            <input type="text" id="test-model" placeholder="예: NACA0012">
-                        </div>
-                        <div class="form-group">
-                            <label>Objective</label>
-                            <input type="text" id="objective" placeholder="예: Mach 2.0 flow visualization">
-                        </div>
-                        <div class="form-group">
-                            <label>Mach #</label>
-                            <input type="number" id="target-mach" step="0.01" placeholder="예: 2.0">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <h3>환경 / 풍동 설정</h3>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>air pressure [hpa]</label>
-                            <input type="number" id="air-pressure" step="0.1" placeholder="예: 1013.2">
-                        </div>
-                        <div class="form-group">
-                            <label>air temperature [°C]</label>
-                            <input type="number" id="air-temp" step="0.1" placeholder="예: 25.0">
-                        </div>
-                        <div class="form-group">
-                            <label>air humidity [%]</label>
-                            <input type="number" id="air-humidity" step="0.1" placeholder="예: 50.0">
-                        </div>
-                        <div class="form-group">
-                            <label>tank pressure [bar]</label>
-                            <input type="number" id="tank-pressure" step="0.1" placeholder="예: 8.0"
-                                   oninput="document.getElementById('chk-tank-pressure').value=this.value">
-                        </div>
-                        <div class="form-group">
-                            <label>control valve</label>
-                            <input type="text" id="control-valve" placeholder="예: 3.5"
-                                   oninput="document.getElementById('chk-control-valve').value=this.value">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <h3>Schlieren / 시각화</h3>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Schlieren method</label>
-                            <input type="text" id="schlieren-method" placeholder="예: Z-type Schlieren">
-                        </div>
-                        <div class="form-group">
-                            <label>Schlieren target</label>
-                            <input type="text" id="schlieren-target" placeholder="예: model surface">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <h3>카메라 설정</h3>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>camera</label>
-                            <input type="text" id="camera-model" placeholder="예: Phantom TMX7510">
-                        </div>
-                        <div class="form-group">
-                            <label>FPS [Hz]</label>
-                            <input type="number" id="camera-fps" step="1000" placeholder="예: 500000">
-                        </div>
-                        <div class="form-group">
-                            <label>W [px]</label>
-                            <input type="number" id="camera-width" placeholder="예: 1280">
-                        </div>
-                        <div class="form-group">
-                            <label>H [px]</label>
-                            <input type="number" id="camera-height" placeholder="예: 800">
-                        </div>
-                        <div class="form-group">
-                            <label>lens focal length [mm]</label>
-                            <input type="text" id="lens-focal" placeholder="예: 200">
-                        </div>
-                        <div class="form-group">
-                            <label>Expose time [μs]</label>
-                            <input type="number" id="expose-time" step="0.01" placeholder="예: 1.0">
-                        </div>
-                        <div class="form-group">
-                            <label>Expose index</label>
-                            <input type="number" id="expose-index" step="1" placeholder="예: 1">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-section coming-soon-section">
-                    <h3>📊 후처리 결과 (추후 자동 계산)</h3>
-                    <p class="coming-soon-text">test time length(s), p0_avg, T0_avg, Stage 1 물성치 등은 데이터 후처리 및 유동조건 계산 구현 후 자동으로 채워집니다.</p>
-                </div>
-            </div>
-
         </main>
     </div>
 
@@ -252,25 +183,5 @@
     <script src="database.js"></script>
     <script src="excel-handler.js"></script>
     <script src="app.js"></script>
-    <script>
-        // 실험 전 탭의 동기화 필드 초기화
-        document.addEventListener('DOMContentLoaded', () => {
-            const syncFields = () => {
-                document.getElementById('exp-number-before').value = document.getElementById('exp-number').value;
-                document.getElementById('exp-name-sync').value = document.getElementById('exp-name').value;
-                document.getElementById('exp-date-sync').value = document.getElementById('exp-date').value;
-            };
-            syncFields();
-            ['exp-number','exp-name','exp-date'].forEach(id => {
-                document.getElementById(id)?.addEventListener('input', syncFields);
-            });
-            document.getElementById('exp-name-sync')?.addEventListener('input', e => {
-                document.getElementById('exp-name').value = e.target.value;
-            });
-            document.getElementById('exp-date-sync')?.addEventListener('input', e => {
-                document.getElementById('exp-date').value = e.target.value;
-            });
-        });
-    </script>
 </body>
 </html>

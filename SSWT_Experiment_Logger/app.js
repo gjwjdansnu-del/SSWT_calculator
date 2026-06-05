@@ -13,6 +13,24 @@ const STAGE_COLORS = {
     '종료': '#3fb950'
 };
 
+// 체크리스트 항목 사이에 삽입할 입력 블록 (beforeIndex: 해당 항목 직전에 표시)
+const INLINE_INPUT_BLOCKS = [
+    {
+        beforeIndex: 10,
+        title: '목표 압력 입력 — 압축 대기 전',
+        fields: [
+            { id: 'tank-pressure', label: 'tank pressure [bar]', type: 'number', step: '0.1', placeholder: '예: 8.0' }
+        ]
+    },
+    {
+        beforeIndex: 13,
+        title: '조절밸브 설정값 입력 — 최종 확인',
+        fields: [
+            { id: 'control-valve', label: 'control valve', type: 'text', placeholder: '예: 3.5' }
+        ]
+    }
+];
+
 document.addEventListener('DOMContentLoaded', async () => {
     await initDatabase();
     await createNewExperiment();
@@ -24,7 +42,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 function switchTab(tabName) {
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-
     const tabBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
     if (tabBtn) tabBtn.classList.add('active');
     const tabContent = document.getElementById(`tab-${tabName}`);
@@ -38,17 +55,13 @@ async function createNewExperiment() {
 
     const last = await getLastExperiment();
     if (last) {
-        currentExperiment.before.expInfo.name = last.before.expInfo.name;
-        currentExperiment.before.expInfo.testModel = last.before.expInfo.testModel;
-        currentExperiment.before.expInfo.objective = last.before.expInfo.objective;
-        currentExperiment.before.expInfo.targetMach = last.before.expInfo.targetMach;
+        currentExperiment.before.expInfo = { ...last.before.expInfo };
         currentExperiment.before.windTunnel = { ...last.before.windTunnel };
         currentExperiment.before.visualization = { ...last.before.visualization };
         currentExperiment.before.camera = { ...last.before.camera };
     }
 
-    loadBeforeDataToUI();
-    loadSafetyChecklistToUI();
+    loadAllDataToUI();
     renderSafetyChecklist();
     updateChecklistProgress();
 }
@@ -56,59 +69,103 @@ async function createNewExperiment() {
 async function loadExperimentById(id) {
     currentExperiment = await loadExperiment(id);
     currentExperimentId = id;
-    loadBeforeDataToUI();
-    loadSafetyChecklistToUI();
+    loadAllDataToUI();
     renderSafetyChecklist();
     updateChecklistProgress();
 }
 
-// ── 안전 체크리스트 ──────────────────────────────
+// ── 체크리스트 렌더링 ──────────────────────────────
+
+function createInlineInputRow(block) {
+    const tr = document.createElement('tr');
+    tr.className = 'inline-input-row';
+    const fieldsHtml = block.fields.map(f => `
+        <div class="form-group inline-field">
+            <label>${f.label}</label>
+            <input type="${f.type}" id="${f.id}" step="${f.step || ''}" placeholder="${f.placeholder || ''}"
+                   onclick="event.stopPropagation()" onmousedown="event.stopPropagation()">
+        </div>
+    `).join('');
+    tr.innerHTML = `
+        <td colspan="3">
+            <div class="inline-input-block mid-check-block">
+                <div class="inline-input-block-header">
+                    <span class="inline-step-badge mid">입력</span>
+                    <strong>${block.title}</strong>
+                </div>
+                <div class="inline-fields-row">${fieldsHtml}</div>
+            </div>
+        </td>
+    `;
+    return tr;
+}
+
+function createChecklistItemRow(item, idx) {
+    const row = document.createElement('tr');
+    row.className = 'checklist-item-row' + (item.checked ? ' checked' : '');
+    row.dataset.index = idx;
+    row.addEventListener('click', () => handleChecklistRowClick(idx));
+    row.innerHTML = `
+        <td class="check-cell">
+            <span class="check-icon" aria-hidden="true">${item.checked ? '✓' : ''}</span>
+        </td>
+        <td class="item-cell">${item.label}</td>
+        <td class="stage-badge-cell">
+            <span class="stage-badge" style="background:${STAGE_COLORS[item.stage]}22;color:${STAGE_COLORS[item.stage]}">${item.stage}</span>
+        </td>
+    `;
+    return row;
+}
 
 function renderSafetyChecklist() {
     const tbody = document.getElementById('checklist-tbody');
     if (!tbody || !currentExperiment) return;
+
+    collectBeforeFromUI();
 
     const items = currentExperiment.safetyChecklist.items;
     tbody.innerHTML = '';
 
     let lastStage = '';
     items.forEach((item, idx) => {
-        const tr = document.createElement('tr');
         if (item.stage !== lastStage) {
             lastStage = item.stage;
-            tr.className = 'stage-divider-row';
-            tr.innerHTML = `<td colspan="3" class="stage-divider" style="border-left-color:${STAGE_COLORS[item.stage] || '#58a6ff'}">${item.stage}</td>`;
-            tbody.appendChild(tr);
+            const divider = document.createElement('tr');
+            divider.className = 'stage-divider-row';
+            divider.innerHTML = `<td colspan="3" class="stage-divider" style="border-left-color:${STAGE_COLORS[item.stage] || '#58a6ff'}">${item.stage}</td>`;
+            tbody.appendChild(divider);
         }
 
-        const row = document.createElement('tr');
-        row.className = 'checklist-item-row' + (item.checked ? ' checked' : '');
-        row.dataset.index = idx;
-        row.addEventListener('click', () => handleChecklistRowClick(idx));
-        row.innerHTML = `
-            <td class="check-cell">
-                <span class="check-icon" aria-hidden="true">${item.checked ? '✓' : ''}</span>
-            </td>
-            <td class="item-cell">${item.label}</td>
-            <td class="stage-badge-cell">
-                <span class="stage-badge" style="background:${STAGE_COLORS[item.stage]}22;color:${STAGE_COLORS[item.stage]}">${item.stage}</span>
-            </td>
-        `;
-        tbody.appendChild(row);
+        INLINE_INPUT_BLOCKS.filter(b => b.beforeIndex === idx).forEach(block => {
+            tbody.appendChild(createInlineInputRow(block));
+        });
+
+        tbody.appendChild(createChecklistItemRow(item, idx));
     });
+
+    fillMidChecklistInputs();
+}
+
+function fillMidChecklistInputs() {
+    if (!currentExperiment) return;
+    const wt = currentExperiment.before.windTunnel;
+    const tp = document.getElementById('tank-pressure');
+    const cv = document.getElementById('control-valve');
+    if (tp) tp.value = wt.tankPressure ?? '';
+    if (cv) cv.value = wt.controlValve ?? '';
 }
 
 function handleChecklistRowClick(index) {
     if (!currentExperiment) return;
+    collectBeforeFromUI();
+
     const items = currentExperiment.safetyChecklist.items;
     let firstUnchecked = items.findIndex(i => !i.checked);
     if (firstUnchecked === -1) firstUnchecked = items.length;
 
     if (index < firstUnchecked) {
-        // 이미 체크된 구간 클릭 → 해당 항목부터 아래 모두 해제
         for (let i = index; i < items.length; i++) items[i].checked = false;
     } else {
-        // 미체크 구간 클릭 → 위부터 해당 항목까지 일괄 체크
         for (let i = 0; i <= index; i++) items[i].checked = true;
     }
 
@@ -129,138 +186,53 @@ function updateChecklistProgress() {
     if (text) text.textContent = `${done} / ${total} 항목 완료 (${pct}%)`;
 }
 
-function loadSafetyChecklistToUI() {
+// ── 데이터 수집 / 로드 ──────────────────────────────
+
+function collectBeforeFromUI() {
     if (!currentExperiment) return;
-    const sc = currentExperiment.safetyChecklist;
-    document.getElementById('chk-tank-pressure').value = sc.tankPressure ?? '';
-    document.getElementById('chk-control-valve').value = sc.controlValve ?? '';
-    document.getElementById('checklist-notes').value = sc.notes ?? '';
-}
-
-function collectSafetyChecklistFromUI() {
-    if (!currentExperiment) return;
-    const sc = currentExperiment.safetyChecklist;
-    sc.tankPressure = parseFloat(document.getElementById('chk-tank-pressure').value) || null;
-    sc.controlValve = document.getElementById('chk-control-valve').value;
-    sc.notes = document.getElementById('checklist-notes').value;
-
-    const allChecked = sc.items.every(i => i.checked);
-    if (allChecked) sc.completedAt = new Date().toISOString();
-}
-
-async function saveSafetyChecklist() {
-    if (!currentExperiment) await createNewExperiment();
-    currentExperiment.before.expInfo.name = document.getElementById('exp-name').value || '';
-    currentExperiment.before.expInfo.date = document.getElementById('exp-date').value || '';
-    collectSafetyChecklistFromUI();
-
-    const done = currentExperiment.safetyChecklist.items.filter(i => i.checked).length;
-    const total = currentExperiment.safetyChecklist.items.length;
-
-    if (done < total) {
-        if (!confirm(`${done}/${total} 항목만 체크되었습니다. 저장하시겠습니까?`)) return;
-    }
-
-    if (done === total) currentExperiment.status = 'safety_complete';
-
-    try {
-        const id = await saveExperiment(currentExperiment);
-        if (!currentExperimentId) {
-            currentExperimentId = id;
-            currentExperiment.id = id;
-        }
-        alert(`✅ 안전 체크리스트 저장 완료 (${done}/${total})`);
-    } catch (e) {
-        alert('❌ 저장 실패: ' + e.message);
-    }
-}
-
-function resetSafetyChecklist() {
-    if (!confirm('체크리스트를 초기화하시겠습니까?')) return;
-    if (!currentExperiment) return;
-    currentExperiment.safetyChecklist = createDefaultSafetyChecklist();
-    loadSafetyChecklistToUI();
-    renderSafetyChecklist();
-    updateChecklistProgress();
-}
-
-function printSafetyChecklist() {
-    window.print();
-}
-
-// ── 실험 전 정보 ──────────────────────────────
-
-async function saveBeforeData() {
-    if (!currentExperiment) await createNewExperiment();
 
     currentExperiment.before.expInfo = {
-        name: document.getElementById('exp-name').value || document.getElementById('exp-name-sync')?.value || '',
-        date: document.getElementById('exp-date').value || document.getElementById('exp-date-sync')?.value || '',
-        testModel: document.getElementById('test-model').value,
-        objective: document.getElementById('objective').value,
-        targetMach: parseFloat(document.getElementById('target-mach').value) || null
+        name: document.getElementById('exp-name')?.value || '',
+        date: document.getElementById('exp-date')?.value || '',
+        testModel: document.getElementById('test-model')?.value || '',
+        objective: document.getElementById('objective')?.value || '',
+        targetMach: parseFloat(document.getElementById('target-mach')?.value) || null
     };
     currentExperiment.before.windTunnel = {
-        airPressure: parseFloat(document.getElementById('air-pressure').value) || null,
-        airTemp: parseFloat(document.getElementById('air-temp').value) || null,
-        airHumidity: parseFloat(document.getElementById('air-humidity').value) || null,
-        tankPressure: parseFloat(document.getElementById('tank-pressure').value) || null,
-        controlValve: document.getElementById('control-valve').value
+        airPressure: parseFloat(document.getElementById('air-pressure')?.value) || null,
+        airTemp: parseFloat(document.getElementById('air-temp')?.value) || null,
+        airHumidity: parseFloat(document.getElementById('air-humidity')?.value) || null,
+        tankPressure: parseFloat(document.getElementById('tank-pressure')?.value) || null,
+        controlValve: document.getElementById('control-valve')?.value || ''
     };
     currentExperiment.before.visualization = {
-        method: document.getElementById('schlieren-method').value,
-        target: document.getElementById('schlieren-target').value
+        method: document.getElementById('schlieren-method')?.value || '',
+        target: document.getElementById('schlieren-target')?.value || ''
     };
     currentExperiment.before.camera = {
-        model: document.getElementById('camera-model').value,
-        fps: parseFloat(document.getElementById('camera-fps').value) || null,
-        width: parseInt(document.getElementById('camera-width').value, 10) || null,
-        height: parseInt(document.getElementById('camera-height').value, 10) || null,
-        lensFocal: document.getElementById('lens-focal').value,
-        exposeTime: parseFloat(document.getElementById('expose-time').value) || null,
-        exposeIndex: parseFloat(document.getElementById('expose-index').value) || null
+        model: document.getElementById('camera-model')?.value || '',
+        fps: parseFloat(document.getElementById('camera-fps')?.value) || null,
+        width: parseInt(document.getElementById('camera-width')?.value, 10) || null,
+        height: parseInt(document.getElementById('camera-height')?.value, 10) || null,
+        lensFocal: document.getElementById('lens-focal')?.value || '',
+        exposeTime: parseFloat(document.getElementById('expose-time')?.value) || null,
+        exposeIndex: parseFloat(document.getElementById('expose-index')?.value) || null
     };
 
-    // 체크리스트 헤더 필드와 동기화
-    currentExperiment.safetyChecklist.tankPressure = currentExperiment.before.windTunnel.tankPressure;
-    currentExperiment.safetyChecklist.controlValve = currentExperiment.before.windTunnel.controlValve;
-    document.getElementById('chk-tank-pressure').value = currentExperiment.before.windTunnel.tankPressure ?? '';
-    document.getElementById('chk-control-valve').value = currentExperiment.before.windTunnel.controlValve ?? '';
-
-    if (currentExperiment.status === 'pending') {
-        currentExperiment.status = 'before_complete';
-    }
-
-    try {
-        const id = await saveExperiment(currentExperiment);
-        if (!currentExperimentId) {
-            currentExperimentId = id;
-            currentExperiment.id = id;
-        }
-        alert('✅ 실험 전 정보가 저장되었습니다.');
-    } catch (e) {
-        alert('❌ 저장 실패: ' + e.message);
-    }
+    const sc = currentExperiment.safetyChecklist;
+    sc.tankPressure = currentExperiment.before.windTunnel.tankPressure;
+    sc.controlValve = currentExperiment.before.windTunnel.controlValve;
+    sc.notes = document.getElementById('checklist-notes')?.value || '';
 }
 
-function loadBeforeDataToUI() {
+function loadAllDataToUI() {
     if (!currentExperiment) return;
     const b = currentExperiment.before;
+    const sc = currentExperiment.safetyChecklist;
 
-    const expNum = currentExperiment.expNumber || '';
-    const expName = b.expInfo.name || '';
-    const expDate = b.expInfo.date || '';
-
-    document.getElementById('exp-number').value = expNum;
-    document.getElementById('exp-name').value = expName;
-    document.getElementById('exp-date').value = expDate;
-
-    const numBefore = document.getElementById('exp-number-before');
-    const nameSync = document.getElementById('exp-name-sync');
-    const dateSync = document.getElementById('exp-date-sync');
-    if (numBefore) numBefore.value = expNum;
-    if (nameSync) nameSync.value = expName;
-    if (dateSync) dateSync.value = expDate;
+    document.getElementById('exp-number').value = currentExperiment.expNumber || '';
+    document.getElementById('exp-name').value = b.expInfo.name || '';
+    document.getElementById('exp-date').value = b.expInfo.date || '';
     document.getElementById('test-model').value = b.expInfo.testModel || '';
     document.getElementById('objective').value = b.expInfo.objective || '';
     document.getElementById('target-mach').value = b.expInfo.targetMach ?? '';
@@ -268,8 +240,6 @@ function loadBeforeDataToUI() {
     document.getElementById('air-pressure').value = b.windTunnel.airPressure ?? '';
     document.getElementById('air-temp').value = b.windTunnel.airTemp ?? '';
     document.getElementById('air-humidity').value = b.windTunnel.airHumidity ?? '';
-    document.getElementById('tank-pressure').value = b.windTunnel.tankPressure ?? '';
-    document.getElementById('control-valve').value = b.windTunnel.controlValve || '';
 
     document.getElementById('schlieren-method').value = b.visualization.method || '';
     document.getElementById('schlieren-target').value = b.visualization.target || '';
@@ -281,6 +251,51 @@ function loadBeforeDataToUI() {
     document.getElementById('lens-focal').value = b.camera.lensFocal || '';
     document.getElementById('expose-time').value = b.camera.exposeTime ?? '';
     document.getElementById('expose-index').value = b.camera.exposeIndex ?? '';
+
+    document.getElementById('checklist-notes').value = sc.notes ?? '';
+}
+
+async function saveExperimentData() {
+    if (!currentExperiment) await createNewExperiment();
+    collectBeforeFromUI();
+
+    const done = currentExperiment.safetyChecklist.items.filter(i => i.checked).length;
+    const total = currentExperiment.safetyChecklist.items.length;
+
+    if (done < total) {
+        if (!confirm(`${done}/${total} 항목만 체크되었습니다. 저장하시겠습니까?`)) return;
+    }
+
+    if (done === total) {
+        currentExperiment.status = 'safety_complete';
+        currentExperiment.safetyChecklist.completedAt = new Date().toISOString();
+    } else if (currentExperiment.status === 'pending') {
+        currentExperiment.status = 'before_complete';
+    }
+
+    try {
+        const id = await saveExperiment(currentExperiment);
+        if (!currentExperimentId) {
+            currentExperimentId = id;
+            currentExperiment.id = id;
+        }
+        alert(`✅ 저장 완료 (체크 ${done}/${total})`);
+    } catch (e) {
+        alert('❌ 저장 실패: ' + e.message);
+    }
+}
+
+function resetSafetyChecklist() {
+    if (!confirm('체크리스트만 초기화하시겠습니까? (입력값은 유지)')) return;
+    if (!currentExperiment) return;
+    currentExperiment.safetyChecklist.items.forEach(i => { i.checked = false; });
+    currentExperiment.safetyChecklist.completedAt = null;
+    renderSafetyChecklist();
+    updateChecklistProgress();
+}
+
+function printSafetyChecklist() {
+    window.print();
 }
 
 // ── 실험 목록 ──────────────────────────────
@@ -303,11 +318,11 @@ async function refreshExperimentList() {
         experiments.sort((a, b) => (b.expNumber || 0) - (a.expNumber || 0));
 
         experiments.forEach(exp => {
-            const row = document.createElement('tr');
             const info = exp.before?.expInfo || {};
             const checked = exp.safetyChecklist?.items?.filter(i => i.checked).length ?? 0;
             const total = exp.safetyChecklist?.items?.length ?? 25;
 
+            const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${exp.expNumber}</td>
                 <td>${info.date || '-'}</td>
@@ -329,15 +344,15 @@ async function refreshExperimentList() {
 }
 
 function getStatusBadge(exp) {
-    if (exp.status === 'before_complete') return '<span class="status-badge complete">실험전 완료</span>';
-    if (exp.status === 'safety_complete') return '<span class="status-badge processing">체크리스트 완료</span>';
+    if (exp.status === 'safety_complete') return '<span class="status-badge complete">완료</span>';
+    if (exp.status === 'before_complete') return '<span class="status-badge processing">입력 중</span>';
     return '<span class="status-badge pending">진행 중</span>';
 }
 
 async function loadAndEditExperiment(id) {
     await loadExperimentById(id);
     closeExperimentList();
-    switchTab('before');
+    switchTab('experiment');
 }
 
 async function confirmDeleteExperiment(id) {
@@ -360,5 +375,5 @@ async function createNewExperimentFromUI() {
     }
     await createNewExperiment();
     document.getElementById('exp-date').valueAsDate = new Date();
-    switchTab('before');
+    switchTab('experiment');
 }
