@@ -16,15 +16,15 @@ const STAGE_COLORS = {
 // 체크리스트 항목 사이에 삽입할 입력 블록 (beforeIndex: 해당 항목 직전에 표시)
 const INLINE_INPUT_BLOCKS = [
     {
-        beforeIndex: 10,
-        title: '목표 압력 입력 — 압축 대기 전',
+        beforeIndex: 13,
+        title: '탱크 압력 기록',
         fields: [
             { id: 'tank-pressure', label: 'tank pressure [bar]', type: 'number', step: '0.1', placeholder: '예: 8.0' }
         ]
     },
     {
-        beforeIndex: 13,
-        title: '조절밸브 설정값 입력 — 최종 확인',
+        beforeIndex: 14,
+        title: '조절밸브 설정값 확인',
         fields: [
             { id: 'control-valve', label: 'control valve', type: 'text', placeholder: '예: 3.5' }
         ]
@@ -66,9 +66,24 @@ async function createNewExperiment() {
     updateChecklistProgress();
 }
 
+function mergeChecklistItems(existing) {
+    const fresh = createDefaultSafetyChecklist();
+    if (!existing?.items) return fresh;
+    fresh.items.forEach(item => {
+        const old = existing.items.find(o => o.label === item.label);
+        if (old) item.checked = old.checked;
+    });
+    fresh.tankPressure = existing.tankPressure ?? null;
+    fresh.controlValve = existing.controlValve ?? '';
+    fresh.notes = existing.notes ?? '';
+    fresh.completedAt = existing.completedAt ?? null;
+    return fresh;
+}
+
 async function loadExperimentById(id) {
     currentExperiment = await loadExperiment(id);
     currentExperimentId = id;
+    currentExperiment.safetyChecklist = mergeChecklistItems(currentExperiment.safetyChecklist);
     loadAllDataToUI();
     renderSafetyChecklist();
     updateChecklistProgress();
@@ -320,7 +335,7 @@ async function refreshExperimentList() {
         experiments.forEach(exp => {
             const info = exp.before?.expInfo || {};
             const checked = exp.safetyChecklist?.items?.filter(i => i.checked).length ?? 0;
-            const total = exp.safetyChecklist?.items?.length ?? 25;
+            const total = exp.safetyChecklist?.items?.length ?? 26;
 
             const row = document.createElement('tr');
             row.innerHTML = `

@@ -21,6 +21,7 @@ const SAFETY_CHECKLIST_ITEMS = [
     { stage: '압축', label: '목표 압력까지 대기' },
     { stage: '압축', label: '목표 압력 도달 후 저압 압축기 OFF → 고압 압축기 OFF' },
     { stage: '최종 확인', label: 'T 분기 밸브 OPEN' },
+    { stage: '최종 확인', label: '탱크 압력 기록' },
     { stage: '최종 확인', label: '조절밸브 설정값 확인' },
     { stage: '최종 확인', label: '계측·가시화 시스템 준비 확인' },
     { stage: '최종 확인', label: '배기 출구에 반드시 인원 배치, 접근 통제' },
