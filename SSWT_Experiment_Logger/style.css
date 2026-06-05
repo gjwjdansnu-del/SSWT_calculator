@@ -1167,3 +1167,34 @@ canvas {
     .form-section { border: 1px solid #ccc; }
     .checklist-table td, .checklist-table th { color: black; }
 }
+
+/* 캘리브레이션 후처리 */
+.calib-info-box {
+    background: #1e2a3a;
+    border: 1px solid #3d5a8a;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: #8b949e;
+}
+
+.calib-info-box strong {
+    color: #7eb8f7;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.calib-rule-list {
+    margin: 0;
+    padding-left: 20px;
+    line-height: 1.7;
+}
+
+.calib-canvas {
+    width: 100%;
+    max-width: 1200px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    display: block;
+}

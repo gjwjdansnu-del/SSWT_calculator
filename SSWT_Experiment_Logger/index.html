@@ -10,7 +10,7 @@
 <body>
     <div class="app-container">
         <header class="app-header">
-            <h1>🌬️ SSWT 실험 로거 <span class="version-tag">ver 1.0.3</span></h1>
+            <h1>🌬️ SSWT 실험 로거 <span class="version-tag">ver 1.1.0</span></h1>
             <div class="header-actions">
                 <button onclick="createNewExperimentFromUI()" class="btn-secondary">➕ 새 실험</button>
                 <button onclick="showExperimentList()" class="btn-secondary">📋 실험 목록</button>
@@ -22,7 +22,7 @@
 
         <nav class="nav-tabs">
             <button class="tab-btn active" data-tab="experiment" onclick="switchTab('experiment')">🛡️ 실험 전 &amp; 체크리스트</button>
-            <button class="tab-btn tab-disabled" disabled title="추후 구현 예정">🔬 데이터 후처리</button>
+            <button class="tab-btn" data-tab="processing" onclick="switchTab('processing')">🔬 데이터 후처리</button>
             <button class="tab-btn tab-disabled" disabled title="추후 구현 예정">🧮 유동조건 계산</button>
         </nav>
 
@@ -148,6 +148,45 @@
                     </div>
                 </div>
             </div>
+
+            <!-- 데이터 후처리 (캘리브레이션) -->
+            <div id="tab-processing" class="tab-content">
+                <div class="page-header">
+                    <div>
+                        <h2>🔬 데이터 후처리 — 캘리브레이션</h2>
+                        <p class="page-subtitle">CSV 업로드 → mA/V 역변환 → ax+b 재캘리브레이션</p>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>1. CSV 파일 업로드</h3>
+                    <div class="upload-box" style="border:2px dashed #3d5a8a;padding:20px;border-radius:8px;text-align:center;background:#161b22;">
+                        <input type="file" id="csv-data-file" accept=".csv" onchange="handleCsvUpload(event)">
+                        <p id="csv-upload-status" style="margin-top:10px;font-size:14px;color:#8b949e;">DAQ CSV 파일을 선택하세요</p>
+                    </div>
+                </div>
+
+                <div class="form-section" id="processing-results" style="display:none;">
+                    <h3>2. 캘리브레이션 결과</h3>
+                    <div class="calib-info-box">
+                        <strong>변환 규칙</strong>
+                        <ul class="calib-rule-list">
+                            <li>Ch1~2, Ch10: 4–20 mA → 0–20 barg (Ch10은 재캘리브 없이 유지)</li>
+                            <li>Ch3: 4–20 mA → 0–10 barg</li>
+                            <li>Ch4~9: 4–20 mA → 0–2 barg (노즐벽면 4~9, ax+b 적용)</li>
+                            <li>Ch11: 4–20 mA → 0–24.5 barg (재캘리브 없이 유지)</li>
+                            <li>Ch12~16: 0–10 V → 0–10 barg (피토 1~5, ax+b 적용)</li>
+                        </ul>
+                    </div>
+
+                    <canvas id="calibrated-graph" width="1200" height="500" class="calib-canvas"></canvas>
+
+                    <div class="header-btn-group" style="margin-top:16px;">
+                        <button onclick="exportCalibratedExcel()" class="btn-primary">📥 엑셀 내보내기</button>
+                        <button onclick="exportCalibratedCsv()" class="btn-secondary">📥 CSV 내보내기</button>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -182,6 +221,7 @@
 
     <script src="database.js"></script>
     <script src="excel-handler.js"></script>
+    <script src="calibration-processing.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
