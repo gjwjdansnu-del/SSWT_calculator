@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APL SSWT 통합 시스템</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a3a5c 0%, #0d2137 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .menu-screen {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            padding: 50px;
+            max-width: 600px;
+            width: 100%;
+        }
+        .menu-screen h1 { font-size: 2.2em; margin-bottom: 15px; color: #333; text-align: center; }
+        .menu-screen .subtitle { text-align: center; color: #666; margin-bottom: 40px; font-size: 1.1em; }
+        .menu-btn {
+            padding: 30px;
+            border: 3px solid #ddd;
+            border-radius: 15px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+            margin-bottom: 16px;
+        }
+        .menu-btn:hover {
+            border-color: #1a3a5c;
+            background: rgba(26, 58, 92, 0.05);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(26, 58, 92, 0.2);
+        }
+        .menu-btn.disabled { opacity: 0.5; cursor: not-allowed; }
+        .menu-btn.disabled:hover { transform: none; box-shadow: none; border-color: #ddd; }
+        .menu-btn h2 { font-size: 1.5em; color: #333; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .menu-btn p { color: #666; font-size: 1em; line-height: 1.6; }
+        .badge-soon { font-size: 0.65em; background: #eee; color: #888; padding: 2px 8px; border-radius: 4px; margin-left: auto; }
+    </style>
+</head>
+<body>
+    <div class="menu-screen">
+        <h1>🌬️ APL SSWT 통합 시스템</h1>
+        <p class="subtitle">초음속 풍동 (Supersonic Wind Tunnel)</p>
+
+        <div class="menu-btn" onclick="goToLogger()">
+            <h2><span>📊</span> 실험 로거 <span class="badge-soon">v1.0.0</span></h2>
+            <p>
+                • 가동 안전 체크리스트<br>
+                • 실험 전 정보 입력<br>
+                • 엑셀보내기/불러오기
+            </p>
+        </div>
+
+        <div class="menu-btn disabled">
+            <h2><span>🧮</span> 유동조건 탐색 <span class="badge-soon">준비 중</span></h2>
+            <p>실험 전 목표 마하수 및 압력 조건 탐색 (추후 구현)</p>
+        </div>
+    </div>
+    <script>
+        function goToLogger() {
+            window.location.href = 'SSWT_Experiment_Logger/index.html';
+        }
+    </script>
+</body>
+</html>
