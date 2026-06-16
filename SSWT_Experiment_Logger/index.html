@@ -10,7 +10,7 @@
 <body>
     <div class="app-container">
         <header class="app-header">
-            <h1>🌬️ SSWT 실험 로거 <span class="version-tag">ver 1.2.0</span></h1>
+            <h1>🌬️ SSWT 실험 로거 <span class="version-tag">ver 1.3.0</span></h1>
             <div class="header-actions">
                 <button onclick="createNewExperimentFromUI()" class="btn-secondary">➕ 새 실험</button>
                 <button onclick="showExperimentList()" class="btn-secondary">📋 실험 목록</button>
@@ -120,12 +120,8 @@
                                 <input type="text" id="lens-focal" placeholder="예: 200">
                             </div>
                             <div class="form-group">
-                                <label>Expose time [μs]</label>
-                                <input type="number" id="expose-time" step="0.01" placeholder="예: 1.0">
-                            </div>
-                            <div class="form-group">
-                                <label>Expose index</label>
-                                <input type="number" id="expose-index" step="1" placeholder="예: 1">
+                                <label>exposure</label>
+                                <input type="text" id="exposure" placeholder="예: 1.0">
                             </div>
                         </div>
                     </div>

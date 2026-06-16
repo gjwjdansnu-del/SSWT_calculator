@@ -110,8 +110,7 @@ function createExperimentData() {
                 width: null,
                 height: null,
                 lensFocal: '',
-                exposeTime: null,
-                exposeIndex: null
+                exposure: ''
             }
         },
 
@@ -174,6 +173,18 @@ async function deleteExperiment(id) {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([STORE_NAME], 'readwrite');
         const request = transaction.objectStore(STORE_NAME).delete(id);
+        request.onsuccess = () => {
+            backupToLocalStorage();
+            resolve();
+        };
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function clearAllExperiments() {
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readwrite');
+        const request = transaction.objectStore(STORE_NAME).clear();
         request.onsuccess = () => {
             backupToLocalStorage();
             resolve();

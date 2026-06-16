@@ -230,8 +230,7 @@ function collectBeforeFromUI() {
         width: parseInt(document.getElementById('camera-width')?.value, 10) || null,
         height: parseInt(document.getElementById('camera-height')?.value, 10) || null,
         lensFocal: document.getElementById('lens-focal')?.value || '',
-        exposeTime: parseFloat(document.getElementById('expose-time')?.value) || null,
-        exposeIndex: parseFloat(document.getElementById('expose-index')?.value) || null
+        exposure: document.getElementById('exposure')?.value || ''
     };
 
     const sc = currentExperiment.safetyChecklist;
@@ -264,8 +263,12 @@ function loadAllDataToUI() {
     document.getElementById('camera-width').value = b.camera.width ?? '';
     document.getElementById('camera-height').value = b.camera.height ?? '';
     document.getElementById('lens-focal').value = b.camera.lensFocal || '';
-    document.getElementById('expose-time').value = b.camera.exposeTime ?? '';
-    document.getElementById('expose-index').value = b.camera.exposeIndex ?? '';
+    const exposure = b.camera.exposure ?? (
+        b.camera.exposeTime != null || b.camera.exposeIndex != null
+            ? [b.camera.exposeTime, b.camera.exposeIndex].filter(v => v != null && v !== '').join('/')
+            : ''
+    );
+    document.getElementById('exposure').value = exposure;
 
     document.getElementById('checklist-notes').value = sc.notes ?? '';
 }

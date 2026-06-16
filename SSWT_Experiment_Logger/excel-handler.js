@@ -4,11 +4,11 @@
 
 const EXCEL_HEADERS = [
     'exp#', 'name', 'date', 'test model', 'Objective', 'Mach #',
-    'air pressure(hpa)', 'air temperature(C) ', 'air humidity(%)',
+    'air pressure(hpa)', 'air temperature(C)', 'air humidity(%)',
     'tank pressure(bar)', 'control valve',
     'Schlieren method', 'Schlieren target', 'camera',
     'FPS(Hz)', 'W(px)', 'H(px)', 'lens focal length(mm)',
-    'Expose time(us)', 'Expose index',
+    'exposure',
     'test time length(s)', 'p0_avg[bar]', 'T0_avg[K]',
     'Stage 1 p (Pa)', 'Stage 1 T (K)', 'Stage 1 rho (kg/m**3)',
     'Stage 1 u (J/kg)', 'Stage 1 h (J/kg)', 'Stage 1 R (J/(kg.K))',
@@ -16,6 +16,59 @@ const EXCEL_HEADERS = [
     'Stage 1 s (J/(kg.K))', 'Stage 1 V (m/s)', 'Stage 1 M',
     'unit Re1(/m)', 'h_tot1'
 ];
+
+const EXCEL_HEADER_ALIASES = {
+    'air pressure(hpa)': ['air pressure(hpa)', 'air pressure [hpa]'],
+    'air temperature(C)': ['air temperature(C)', 'air temperature(C) ', 'air temperature [°C]', 'air temperature [C]'],
+    'air humidity(%)': ['air humidity(%)', 'air humidity [%]'],
+    'tank pressure(bar)': ['tank pressure(bar)', 'tank pressure [bar]'],
+    'exposure': ['exposure'],
+    'Expose time(us)': ['Expose time(us)'],
+    'Expose index': ['Expose index']
+};
+
+function normalizeHeaderName(name) {
+    return String(name).trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function findHeaderIndex(headers, canonicalName) {
+    const aliases = EXCEL_HEADER_ALIASES[canonicalName] || [canonicalName];
+    for (const alias of aliases) {
+        const target = normalizeHeaderName(alias);
+        const idx = headers.findIndex(h => normalizeHeaderName(h) === target);
+        if (idx >= 0) return idx;
+    }
+    return -1;
+}
+
+function makeRowGetter(headers, row) {
+    return (canonicalName) => {
+        const idx = findHeaderIndex(headers, canonicalName);
+        return idx >= 0 ? row[idx] : '';
+    };
+}
+
+function parseExcelDate(val) {
+    if (val === '' || val == null) return '';
+    if (typeof val === 'number') {
+        const s = String(Math.round(val)).padStart(6, '0');
+        if (/^\d{6}$/.test(s)) {
+            return `20${s.slice(0, 2)}-${s.slice(2, 4)}-${s.slice(4, 6)}`;
+        }
+        return String(val);
+    }
+    return String(val).trim();
+}
+
+function readExposure(get) {
+    const exposure = get('exposure');
+    if (exposure !== '' && exposure != null) return String(exposure).trim();
+
+    const time = get('Expose time(us)');
+    const index = get('Expose index');
+    const parts = [time, index].filter(v => v !== '' && v != null).map(v => String(v).trim());
+    return parts.join('/');
+}
 
 function experimentToRow(exp) {
     const b = exp.before || {};
@@ -25,6 +78,11 @@ function experimentToRow(exp) {
     const cam = b.camera || {};
     const after = exp.after || {};
     const s1 = exp.calculation?.stage1 || {};
+    const exposure = cam.exposure ?? (
+        cam.exposeTime != null || cam.exposeIndex != null
+            ? [cam.exposeTime, cam.exposeIndex].filter(v => v != null && v !== '').join('/')
+            : ''
+    );
 
     return [
         exp.expNumber ?? '',
@@ -45,8 +103,7 @@ function experimentToRow(exp) {
         cam.width ?? '',
         cam.height ?? '',
         cam.lensFocal ?? '',
-        cam.exposeTime ?? '',
-        cam.exposeIndex ?? '',
+        exposure,
         after.testTimeLength ?? '',
         after.p0_avg ?? '',
         after.T0_avg ?? '',
@@ -93,23 +150,41 @@ async function importFromExcel(event) {
 
         const headers = rows[0].map(h => String(h).trim());
         let imported = 0;
+        let skippedDuplicates = 0;
+
+        if (!confirm('기존 실험 데이터를 모두 삭제하고 엑셀 데이터로 대체합니다. 계속하시겠습니까?')) {
+            event.target.value = '';
+            return;
+        }
+        await clearAllExperiments();
+
+        let nextAutoNumber = 1;
+        const usedNumbers = new Set();
 
         for (let i = 1; i < rows.length; i++) {
             const row = rows[i];
             if (!row || row.every(v => v === '' || v == null)) continue;
 
-            const get = (name) => {
-                const idx = headers.findIndex(h => h.toLowerCase() === name.toLowerCase());
-                return idx >= 0 ? row[idx] : '';
-            };
+            const get = makeRowGetter(headers, row);
 
             const exp = createExperimentData();
-            exp.expNumber = parseInt(get('exp#'), 10) || (await getNextExpNumber());
+            const parsed = parseInt(get('exp#'), 10);
+            let expNumber;
+            if (parsed && !usedNumbers.has(parsed)) {
+                expNumber = parsed;
+            } else {
+                if (parsed && usedNumbers.has(parsed)) skippedDuplicates++;
+                while (usedNumbers.has(nextAutoNumber)) nextAutoNumber++;
+                expNumber = nextAutoNumber;
+            }
+            usedNumbers.add(expNumber);
+            nextAutoNumber = Math.max(nextAutoNumber, expNumber + 1);
+            exp.expNumber = expNumber;
             exp.before.expInfo = {
-                name: get('name'),
-                date: get('date'),
-                testModel: get('test model'),
-                objective: get('Objective'),
+                name: String(get('name') ?? '').trim(),
+                date: parseExcelDate(get('date')),
+                testModel: String(get('test model') ?? '').trim(),
+                objective: String(get('Objective') ?? '').trim(),
                 targetMach: parseFloat(get('Mach #')) || null
             };
             exp.before.windTunnel = {
@@ -117,28 +192,32 @@ async function importFromExcel(event) {
                 airTemp: parseFloat(get('air temperature(C)')) || null,
                 airHumidity: parseFloat(get('air humidity(%)')) || null,
                 tankPressure: parseFloat(get('tank pressure(bar)')) || null,
-                controlValve: get('control valve')
+                controlValve: String(get('control valve') ?? '').trim()
             };
             exp.before.visualization = {
-                method: get('Schlieren method'),
-                target: get('Schlieren target')
+                method: String(get('Schlieren method') ?? '').trim(),
+                target: String(get('Schlieren target') ?? '').trim()
             };
             exp.before.camera = {
-                model: get('camera'),
+                model: String(get('camera') ?? '').trim(),
                 fps: parseFloat(get('FPS(Hz)')) || null,
                 width: parseInt(get('W(px)'), 10) || null,
                 height: parseInt(get('H(px)'), 10) || null,
-                lensFocal: get('lens focal length(mm)'),
-                exposeTime: parseFloat(get('Expose time(us)')) || null,
-                exposeIndex: parseFloat(get('Expose index')) || null
+                lensFocal: String(get('lens focal length(mm)') ?? '').trim(),
+                exposure: readExposure(get)
             };
             exp.status = 'before_complete';
             await saveExperiment(exp);
             imported++;
         }
 
-        alert(`✅ ${imported}개 실험을 가져왔습니다.`);
+        let msg = `✅ ${imported}개 실험을 가져왔습니다.`;
+        if (skippedDuplicates > 0) {
+            msg += `\n⚠️ 중복된 exp# ${skippedDuplicates}건은 새 번호로 자동 할당했습니다.`;
+        }
+        alert(msg);
         event.target.value = '';
+        if (typeof showExperimentList === 'function') showExperimentList();
     } catch (e) {
         console.error('Import failed:', e);
         alert('엑셀 불러오기 실패: ' + e.message);
