@@ -8,7 +8,7 @@ const EXCEL_HEADERS = [
     'tank pressure(bar)', 'control valve',
     'Schlieren method', 'Schlieren target', 'camera',
     'FPS(Hz)', 'W(px)', 'H(px)', 'lens focal length(mm)',
-    'exposure',
+    'exposure time(us)', 'exposure index',
     'test time length(s)', 'p0_avg[bar]', 'T0_avg[K]',
     'Stage 1 p (Pa)', 'Stage 1 T (K)', 'Stage 1 rho (kg/m**3)',
     'Stage 1 u (J/kg)', 'Stage 1 h (J/kg)', 'Stage 1 R (J/(kg.K))',
@@ -22,9 +22,8 @@ const EXCEL_HEADER_ALIASES = {
     'air temperature(C)': ['air temperature(C)', 'air temperature(C) ', 'air temperature [°C]', 'air temperature [C]'],
     'air humidity(%)': ['air humidity(%)', 'air humidity [%]'],
     'tank pressure(bar)': ['tank pressure(bar)', 'tank pressure [bar]'],
-    'exposure': ['exposure'],
-    'Expose time(us)': ['Expose time(us)'],
-    'Expose index': ['Expose index']
+    'exposure time(us)': ['exposure time(us)', 'Expose time(us)'],
+    'exposure index': ['exposure index', 'Expose index']
 };
 
 function normalizeHeaderName(name) {
@@ -60,14 +59,11 @@ function parseExcelDate(val) {
     return String(val).trim();
 }
 
-function readExposure(get) {
-    const exposure = get('exposure');
-    if (exposure !== '' && exposure != null) return String(exposure).trim();
-
-    const time = get('Expose time(us)');
-    const index = get('Expose index');
-    const parts = [time, index].filter(v => v !== '' && v != null).map(v => String(v).trim());
-    return parts.join('/');
+function readCameraExposure(get) {
+    return {
+        exposureTime: parseFloat(get('exposure time(us)')) || null,
+        exposureIndex: parseFloat(get('exposure index')) || null
+    };
 }
 
 function experimentToRow(exp) {
@@ -78,11 +74,8 @@ function experimentToRow(exp) {
     const cam = b.camera || {};
     const after = exp.after || {};
     const s1 = exp.calculation?.stage1 || {};
-    const exposure = cam.exposure ?? (
-        cam.exposeTime != null || cam.exposeIndex != null
-            ? [cam.exposeTime, cam.exposeIndex].filter(v => v != null && v !== '').join('/')
-            : ''
-    );
+    const exposureTime = cam.exposureTime ?? cam.exposeTime ?? '';
+    const exposureIndex = cam.exposureIndex ?? cam.exposeIndex ?? '';
 
     return [
         exp.expNumber ?? '',
@@ -103,7 +96,8 @@ function experimentToRow(exp) {
         cam.width ?? '',
         cam.height ?? '',
         cam.lensFocal ?? '',
-        exposure,
+        exposureTime,
+        exposureIndex,
         after.testTimeLength ?? '',
         after.p0_avg ?? '',
         after.T0_avg ?? '',
@@ -204,7 +198,7 @@ async function importFromExcel(event) {
                 width: parseInt(get('W(px)'), 10) || null,
                 height: parseInt(get('H(px)'), 10) || null,
                 lensFocal: String(get('lens focal length(mm)') ?? '').trim(),
-                exposure: readExposure(get)
+                ...readCameraExposure(get)
             };
             exp.status = 'before_complete';
             await saveExperiment(exp);

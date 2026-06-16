@@ -110,7 +110,8 @@ function createExperimentData() {
                 width: null,
                 height: null,
                 lensFocal: '',
-                exposure: ''
+                exposureTime: null,
+                exposureIndex: null
             }
         },
 
